@@ -34,3 +34,6 @@ def create_app():
         db.create_all()
 
     return app
+
+# Create the app instance
+app = create_app()
