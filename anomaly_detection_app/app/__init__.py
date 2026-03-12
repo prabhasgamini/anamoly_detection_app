@@ -2,6 +2,7 @@ from flask import Flask
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager
 from config import Config
+import os
 
 db = SQLAlchemy()
 login_manager = LoginManager()
@@ -26,9 +27,15 @@ def create_app():
     from app.dashboard import dashboard_bp
     app.register_blueprint(dashboard_bp)
 
-    # Ensure model storage directory exists
-    import os
-    os.makedirs('models_storage', exist_ok=True)
+    # Ensure directories exist
+    base_dir = os.path.dirname(os.path.abspath(__file__))
+    project_root = os.path.dirname(base_dir)
+    
+    app.config['UPLOAD_FOLDER'] = os.path.join(project_root, 'uploads')
+    app.config['MODEL_DIR'] = os.path.join(project_root, 'models_storage')
+    
+    os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
+    os.makedirs(app.config['MODEL_DIR'], exist_ok=True)
 
     with app.app_context():
         db.create_all()

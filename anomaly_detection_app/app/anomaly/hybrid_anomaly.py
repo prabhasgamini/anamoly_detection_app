@@ -35,7 +35,6 @@ class HybridDetector:
         confidence = 0
         
         # Isolation Forest: negative score indicates anomaly
-        # Also check if score is significantly lower than mean
         if iso_raw < 0:
             confidence += 0.4
             reasons.append("Isolation Forest detected unusual pattern")
@@ -48,7 +47,7 @@ class HybridDetector:
             confidence += 0.5
             reasons.append("Prediction deviation")
         
-        # Update recent history for adaptive threshold
+        # Update recent history
         self.recent_errors.append(lstm_error)
         self.recent_iso_scores.append(iso_raw)
         
@@ -56,7 +55,7 @@ class HybridDetector:
             self.recent_errors.pop(0)
             self.recent_iso_scores.pop(0)
         
-        # Adaptive: if error is significantly higher than recent patterns
+        # Adaptive: compare with recent patterns
         if len(self.recent_errors) > 10:
             recent_error_mean = np.mean(self.recent_errors[-10:])
             recent_iso_mean = np.mean(self.recent_iso_scores[-10:])
@@ -69,17 +68,12 @@ class HybridDetector:
                 confidence += 0.2
                 reasons.append("Unusual compared to recent data")
         
-        is_anomaly = confidence >= 0.5  # At least one strong signal or combination
+        is_anomaly = confidence >= 0.5
         
         return is_anomaly, min(confidence, 1.0), ", ".join(reasons) if reasons else "Normal pattern"
     
     def get_anomaly_score(self, iso_raw, lstm_error):
         """Get a normalized anomaly score between 0 and 1"""
-        # Normalize Isolation Forest score (0 to 1, where 1 is most anomalous)
         iso_norm = max(0, min(1, (self.iso_score_mean - iso_raw) / (4 * self.iso_score_std + 1e-10)))
-        
-        # Normalize LSTM error (0 to 1, where 1 is most anomalous)
         lstm_norm = max(0, min(1, (lstm_error - self.lstm_error_mean) / (4 * self.lstm_error_std + 1e-10)))
-        
-        # Combined score
         return (iso_norm + lstm_norm) / 2

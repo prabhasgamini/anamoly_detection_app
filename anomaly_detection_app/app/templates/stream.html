@@ -75,6 +75,8 @@ document.addEventListener('DOMContentLoaded', function() {
     };
 
     // Initialize features from template
+    const features = {{ features|tojson|safe }};
+    // Initialize features from template
     const features = {{ features|tojson }};
     
     // Initialize data history for each feature

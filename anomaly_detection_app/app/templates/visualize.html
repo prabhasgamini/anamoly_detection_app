@@ -106,8 +106,8 @@
 document.addEventListener('DOMContentLoaded', function() {
     {% if has_data %}
     try {
-        const chartData = {{ chart_data|tojson }};
-        const features = {{ features|tojson }};
+        const chartData = {{ chart_data|tojson|safe }};
+        const features = {{ features|tojson|safe }};
         
         if (!chartData || !chartData.timestamps || chartData.timestamps.length === 0) {
             console.warn('No data to display');
@@ -119,11 +119,11 @@ document.addEventListener('DOMContentLoaded', function() {
                 const safeFeatureId = feature.replace(/[^a-zA-Z0-9]/g, '_');
                 const canvasId = 'chart-' + safeFeatureId;
                 const canvas = document.getElementById(canvasId);
-                
-                if (!canvas) {
-                    console.warn('Canvas not found for feature:', feature);
-                    return;
-                }
+        if (!chartData || !chartData.timestamps || chartData.timestamps.length === 0) {
+            console.warn('No data to display');
+            return;
+        }
+        
                 
                 const ctx = canvas.getContext('2d');
                 

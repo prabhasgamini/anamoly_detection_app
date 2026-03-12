@@ -72,7 +72,7 @@ def load_detector_for_machine(machine):
         sensor_cols=lstm_config['sensor_cols']
     )
     
-    # Create pure pattern learning hybrid detector with both histories
+    # Create pure pattern learning hybrid detector
     hybrid = HybridDetector(
         iso_model=iso_model,
         lstm_detector=lstm_detector,
