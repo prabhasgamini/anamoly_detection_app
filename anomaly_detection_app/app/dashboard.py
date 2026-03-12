@@ -59,11 +59,11 @@ def stream_data(machine_id):
             row_series = pd.Series(row_dict)
             
             # Detect anomaly using pure pattern learning
-            iso_raw = iso_model.decision_function(
-                row_series[machine.feature_names].values.reshape(1, -1)
-            )[0]
+            from app.anomaly.isolation_forest_model import score_isolation_forest
+
+            iso_raw = score_isolation_forest(iso_model, row_series[machine.feature_names].values)
             lstm_error = lstm_detector.update(row_series)
-            
+
             is_anomaly, confidence, reason = hybrid.detect(iso_raw, lstm_error)
             
             # Save to database

@@ -19,3 +19,14 @@ def train_isolation_forest(sensor_data, contamination='auto'):
 def score_isolation_forest(model, row_values):
     """Return raw decision function (negative = anomaly)"""
     return model.decision_function(row_values.reshape(1, -1))[0]
+
+def get_isolation_forest_scores(model, data):
+    """Get all decision function scores for training data"""
+    return model.decision_function(data)
+
+def is_anomaly_isolation_forest(score):
+    """
+    Determine if a point is anomaly based on Isolation Forest score.
+    Negative score indicates anomaly in Isolation Forest.
+    """
+    return score < 0
