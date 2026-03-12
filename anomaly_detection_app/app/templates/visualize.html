@@ -1,0 +1,186 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="card card-3d p-4">
+        <h2 class="mb-4">📊 Pattern Learning Analysis: {{ machine.machine_id }}</h2>
+        <p class="text-muted">Each chart shows learned patterns. Red points = deviations from learned pattern (anomalies)</p>
+        
+        {% if not has_data %}
+        <div class="alert alert-info text-center p-5">
+            <h3>📁 No Data Available</h3>
+            <p>Upload historical data to train the pattern learning model.</p>
+            <a href="{{ url_for('dashboard.upload', machine_id=machine.id) }}" class="btn btn-glow">Upload CSV Data</a>
+        </div>
+        {% else %}
+        
+        <!-- Summary Stats -->
+        <div class="row mb-4">
+            <div class="col-md-3">
+                <div class="card bg-gradient-primary text-white p-3">
+                    <h6>Total Data Points</h6>
+                    <h3>{{ chart_data.timestamps|length }}</h3>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card bg-gradient-success text-white p-3">
+                    <h6>Features</h6>
+                    <h3>{{ features|length }}</h3>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card bg-gradient-warning text-white p-3">
+                    <h6>Pattern Deviations</h6>
+                    <h3>
+                        {% set total = namespace(value=0) %}
+                        {% for feature in features %}
+                            {% set total.value = total.value + chart_data.features[feature].anomalies|sum %}
+                        {% endfor %}
+                        {{ total.value }}
+                    </h3>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card bg-gradient-info text-white p-3">
+                    <h6>Learning Period</h6>
+                    <h6>{{ chart_data.timestamps[0] if chart_data.timestamps else 'N/A' }}<br>to<br>{{ chart_data.timestamps[-1] if chart_data.timestamps else 'N/A' }}</h6>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Individual Feature Charts -->
+        {% for feature in features %}
+        <div class="card bg-dark text-white mb-4 p-3">
+            <h4 class="mb-3">{{ feature|capitalize }} Sensor Pattern</h4>
+            <div class="chart-container" style="position: relative; height:300px; width:100%">
+                <canvas id="chart-{{ feature|replace(' ', '_')|replace('.', '_') }}"></canvas>
+            </div>
+            
+            <!-- Feature Stats -->
+            <div class="row mt-3">
+                <div class="col-md-3">
+                    {% set values = chart_data.features[feature].values %}
+                    {% if values %}
+                        {% set mean = (values|sum / values|length)|round(2) %}
+                        <small>Mean Pattern: {{ mean }}</small>
+                    {% else %}
+                        <small>Mean Pattern: 0</small>
+                    {% endif %}
+                </div>
+                <div class="col-md-3">
+                    <small>Pattern Range: {{ "%.2f"|format(values|min) if values else '0' }} - {{ "%.2f"|format(values|max) if values else '0' }}</small>
+                </div>
+                <div class="col-md-3">
+                    <small>Std Deviation: 
+                        {% if values %}
+                            {% set std = (values|map('float')|map('pow', 2)|sum / values|length - mean*mean)|sqrt|round(2) %}
+                            {{ std }}
+                        {% else %}0{% endif %}
+                    </small>
+                </div>
+                <div class="col-md-3">
+                    <small>Deviations: <span class="text-danger">{{ chart_data.features[feature].anomalies|sum }}</span></small>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+        {% endif %}
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    {% if has_data %}
+    try {
+        const chartData = {{ chart_data|tojson }};
+        const features = {{ features|tojson }};
+        
+        if (!chartData || !chartData.timestamps || chartData.timestamps.length === 0) {
+            return;
+        }
+        
+        features.forEach(feature => {
+            try {
+                const canvasId = `chart-${feature.replace(/[^a-zA-Z0-9]/g, '_')}`;
+                const canvas = document.getElementById(canvasId);
+                
+                if (!canvas) return;
+                
+                const ctx = canvas.getContext('2d');
+                
+                const featureData = chartData.features[feature] || { values: [], anomalies: [] };
+                const values = featureData.values || [];
+                const anomalies = featureData.anomalies || [];
+                
+                // Create color arrays - red for anomalies, blue for normal
+                const pointColors = values.map((_, i) => 
+                    anomalies[i] === 1 ? '#ff4444' : '#36a2eb'
+                );
+                const pointRadius = anomalies.map(a => a === 1 ? 6 : 3);
+                
+                new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        labels: chartData.timestamps,
+                        datasets: [{
+                            label: feature,
+                            data: values,
+                            borderColor: '#4bc0c0',
+                            backgroundColor: 'rgba(75, 192, 192, 0.1)',
+                            tension: 0.1,
+                            pointBackgroundColor: pointColors,
+                            pointBorderColor: pointColors,
+                            pointRadius: pointRadius,
+                            pointHoverRadius: pointRadius.map(r => r + 2),
+                            borderWidth: 2,
+                            fill: false
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            title: {
+                                display: true,
+                                text: `${feature} - Red points = Pattern deviation (anomaly)`,
+                                color: '#fff'
+                            },
+                            tooltip: {
+                                callbacks: {
+                                    label: function(context) {
+                                        const value = context.raw;
+                                        const isAnomaly = anomalies[context.dataIndex] === 1;
+                                        return `${feature}: ${value.toFixed(2)} ${isAnomaly ? '⚠️ DEVIATION' : ''}`;
+                                    }
+                                }
+                            }
+                        },
+                        scales: {
+                            x: {
+                                ticks: {
+                                    maxRotation: 45,
+                                    minRotation: 45,
+                                    maxTicksLimit: 10,
+                                    color: '#fff'
+                                },
+                                grid: { color: 'rgba(255,255,255,0.1)' }
+                            },
+                            y: {
+                                ticks: { color: '#fff' },
+                                grid: { color: 'rgba(255,255,255,0.1)' }
+                            }
+                        }
+                    }
+                });
+            } catch (e) {
+                console.error(`Error creating chart for ${feature}:`, e);
+            }
+        });
+    } catch (error) {
+        console.error('Error initializing charts:', error);
+    }
+    {% endif %}
+});
+</script>
+{% endblock %}
