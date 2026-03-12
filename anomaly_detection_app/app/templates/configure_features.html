@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="card card-3d p-4">
+    <h2 class="mb-4">⚙️ Configure Machine</h2>
+    <form method="POST" id="configForm">
+        <div class="mb-3">
+            <label class="form-label">Machine ID</label>
+            <input type="text" name="machine_id" class="form-control" required>
+        </div>
+        <div class="mb-3">
+            <label class="form-label">Number of Features</label>
+            <input type="number" name="feature_count" id="feature_count" class="form-control" min="1" value="4" required>
+        </div>
+        <div id="featureNames"></div>
+        <button type="submit" class="btn btn-glow">Save & Continue</button>
+    </form>
+</div>
+
+<script>
+document.getElementById('feature_count').addEventListener('input', function(e) {
+    let count = parseInt(e.target.value);
+    let container = document.getElementById('featureNames');
+    container.innerHTML = '';
+    for(let i=0; i<count; i++) {
+        container.innerHTML += `
+            <div class="mb-2">
+                <label class="form-label">Feature ${i+1} Name</label>
+                <input type="text" name="feature_name_${i}" class="form-control" required>
+            </div>
+        `;
+    }
+});
+// Trigger on load
+document.getElementById('feature_count').dispatchEvent(new Event('input'));
+</script>
+{% endblock %}

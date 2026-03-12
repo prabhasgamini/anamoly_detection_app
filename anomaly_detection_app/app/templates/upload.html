@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="card card-3d p-4">
+    <h2 class="mb-4">📤 Upload Training Data</h2>
+    <p>Machine: <strong>{{ machine.machine_id }}</strong></p>
+    <p>Expected columns: timestamp, {{ machine.feature_names|join(', ') }}</p>
+    <form method="POST" enctype="multipart/form-data">
+        <div class="mb-3">
+            <label class="form-label">CSV File</label>
+            <input type="file" name="file" class="form-control" accept=".csv" required>
+        </div>
+        <button type="submit" class="btn btn-glow">Upload & Train</button>
+    </form>
+</div>
+{% endblock %}

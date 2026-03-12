@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="card card-3d p-4">
+    <h2 class="mb-4">🚀 Your Machines</h2>
+    <a href="{{ url_for('dashboard.configure') }}" class="btn btn-glow mb-3">➕ Configure New Machine</a>
+    {% if machines %}
+        <div class="row">
+            {% for m in machines %}
+                <div class="col-md-6 mb-3">
+                    <div class="card bg-dark text-white">
+                        <div class="card-body">
+                            <h5 class="card-title">{{ m.machine_id }}</h5>
+                            <p class="card-text">Features: {{ m.feature_names|join(', ') }}</p>
+                            <a href="{{ url_for('dashboard.upload', machine_id=m.id) }}" class="btn btn-sm btn-primary">Upload Data</a>
+                            <a href="{{ url_for('dashboard.stream_page', machine_id=m.id) }}" class="btn btn-sm btn-success">Live Stream</a>
+                        </div>
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+    {% else %}
+        <p>No machines configured yet.</p>
+    {% endif %}
+</div>
+{% endblock %}

@@ -1,0 +1,92 @@
+:root {
+    --gradient-primary: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    --gradient-accent: radial-gradient(circle at 10% 20%, rgba(255, 107, 149, 0.8) 0%, rgba(255, 193, 102, 0.8) 90%);
+    --card-shadow: 0 20px 40px rgba(0,0,0,0.3), 0 10px 20px rgba(0,0,0,0.2);
+}
+
+body {
+    background: var(--gradient-primary);
+    min-height: 100vh;
+    font-family: 'Poppins', sans-serif;
+    color: #fff;
+    position: relative;
+    overflow-x: hidden;
+}
+
+.wave-svg {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    z-index: -1;
+    pointer-events: none;
+}
+
+.card-3d {
+    background: rgba(255,255,255,0.1);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255,255,255,0.2);
+    border-radius: 20px;
+    box-shadow: var(--card-shadow);
+    transform: perspective(1000px) rotateX(0deg) rotateY(0deg);
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+    color: #fff;
+}
+
+.card-3d:hover {
+    transform: perspective(1000px) rotateX(2deg) rotateY(2deg) translateZ(10px);
+    box-shadow: 0 30px 60px rgba(0,0,0,0.4);
+}
+
+.btn-glow {
+    background: linear-gradient(45deg, #ff6b6b, #feca57);
+    border: none;
+    color: white;
+    box-shadow: 0 4px 15px rgba(255, 107, 107, 0.4);
+    transition: all 0.3s;
+    border-radius: 50px;
+    padding: 10px 30px;
+    font-weight: 600;
+}
+
+.btn-glow:hover {
+    transform: scale(1.05);
+    box-shadow: 0 8px 25px rgba(255, 107, 107, 0.6);
+    color: white;
+}
+
+.form-control {
+    background: rgba(255,255,255,0.2);
+    border: 1px solid rgba(255,255,255,0.3);
+    color: white;
+    border-radius: 10px;
+}
+
+.form-control:focus {
+    background: rgba(255,255,255,0.3);
+    border-color: #ff6b6b;
+    box-shadow: 0 0 0 0.2rem rgba(255,107,107,0.25);
+    color: white;
+}
+
+a {
+    color: #feca57;
+    text-decoration: none;
+    font-weight: 600;
+}
+
+a:hover {
+    color: #ff6b6b;
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+    width: 10px;
+}
+::-webkit-scrollbar-track {
+    background: rgba(255,255,255,0.1);
+}
+::-webkit-scrollbar-thumb {
+    background: linear-gradient(45deg, #ff6b6b, #feca57);
+    border-radius: 5px;
+}

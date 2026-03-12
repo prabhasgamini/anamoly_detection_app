@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="card card-3d p-4">
+    <h2 class="mb-4">📡 Live Stream: {{ machine.machine_id }}</h2>
+    <button id="startStream" class="btn btn-glow mb-3">Start Streaming</button>
+    <div id="dataDisplay" class="mt-3">
+        <h4>Latest Readings</h4>
+        <pre id="latestData" class="bg-dark text-white p-3"></pre>
+    </div>
+    <div id="alerts" class="mt-3">
+        <h4>🚨 Alerts</h4>
+        <ul id="alertList" class="list-group"></ul>
+    </div>
+</div>
+
+<script>
+document.getElementById('startStream').addEventListener('click', function() {
+    const eventSource = new EventSource("{{ url_for('dashboard.stream_data', machine_id=machine.id) }}");
+    eventSource.onmessage = function(e) {
+        const data = JSON.parse(e.data);
+        document.getElementById('latestData').innerText = JSON.stringify(data, null, 2);
+        if (data.anomaly) {
+            const li = document.createElement('li');
+            li.className = 'list-group-item list-group-item-danger';
+            li.innerText = `🚨 Anomaly at ${data.timestamp} (score: ${data.score.toFixed(2)})`;
+            document.getElementById('alertList').prepend(li);
+        }
+    };
+    eventSource.onerror = function() {
+        console.log('SSE connection closed');
+    };
+    this.disabled = true;
+});
+</script>
+{% endblock %}
