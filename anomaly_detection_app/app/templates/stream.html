@@ -65,172 +65,223 @@
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
-let charts = {};
-let eventSource = null;
-let dataHistory = {
-    timestamps: [],
-    features: {}
-};
+document.addEventListener('DOMContentLoaded', function() {
+    // Initialize charts object
+    let charts = {};
+    let eventSource = null;
+    let dataHistory = {
+        timestamps: [],
+        features: {}
+    };
 
-// Initialize features
-{% for feature in features %}
-dataHistory.features['{{ feature }}'] = [];
-{% endfor %}
+    // Initialize features from template
+    const features = {{ features|tojson }};
+    
+    // Initialize data history for each feature
+    features.forEach(feature => {
+        dataHistory.features[feature] = [];
+    });
 
-// Initialize charts
-{% for feature in features %}
-const canvasId = 'chart-{{ feature|replace(' ', '_')|replace('.', '_') }}';
-const ctx = document.getElementById(canvasId).getContext('2d');
+    // Initialize charts for each feature
+    features.forEach(feature => {
+        const safeFeatureId = feature.replace(/[^a-zA-Z0-9]/g, '_');
+        const canvasId = 'chart-' + safeFeatureId;
+        const canvas = document.getElementById(canvasId);
+        
+        if (!canvas) {
+            console.error('Canvas not found for feature:', feature);
+            return;
+        }
+        
+        const ctx = canvas.getContext('2d');
 
-charts['{{ feature }}'] = new Chart(ctx, {
-    type: 'line',
-    data: {
-        labels: [],
-        datasets: [{
-            label: '{{ feature }}',
-            data: [],
-            borderColor: '#4bc0c0',
-            backgroundColor: 'rgba(75, 192, 192, 0.1)',
-            tension: 0.1,
-            pointBackgroundColor: [],
-            pointRadius: [],
-            borderWidth: 2,
-            fill: false
-        }]
-    },
-    options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        animation: false,  // Disable animation for real-time
-        plugins: {
-            legend: { display: false },
-            tooltip: { enabled: true }
-        },
-        scales: {
-            x: { 
-                display: true,
-                ticks: { maxTicksLimit: 10 }
+        charts[feature] = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: [],
+                datasets: [{
+                    label: feature,
+                    data: [],
+                    borderColor: '#4bc0c0',
+                    backgroundColor: 'rgba(75, 192, 192, 0.1)',
+                    tension: 0.1,
+                    pointBackgroundColor: [],
+                    pointRadius: [],
+                    borderWidth: 2,
+                    fill: false
+                }]
             },
-            y: { beginAtZero: false }
-        }
-    }
-});
-{% endfor %}
-
-document.getElementById('startStream').addEventListener('click', function() {
-    const interval = document.getElementById('updateInterval').value;
-    
-    this.disabled = true;
-    document.getElementById('stopStream').disabled = false;
-    
-    // Clear previous data
-    dataHistory.timestamps = [];
-    {% for feature in features %}
-    dataHistory.features['{{ feature }}'] = [];
-    {% endfor %}
-    
-    // Start SSE connection
-    eventSource = new EventSource("{{ url_for('dashboard.stream_data', machine_id=machine.id) }}");
-    
-    eventSource.onmessage = function(e) {
-        const data = JSON.parse(e.data);
-        
-        // Update data history
-        dataHistory.timestamps.push(data.timestamp);
-        {% for feature in features %}
-        dataHistory.features['{{ feature }}'].push(data.values['{{ feature }}'] || 0);
-        {% endfor %}
-        
-        // Keep last 50 points for display
-        if (dataHistory.timestamps.length > 50) {
-            dataHistory.timestamps.shift();
-            {% for feature in features %}
-            dataHistory.features['{{ feature }}'].shift();
-            {% endfor %}
-        }
-        
-        // Update each chart
-        {% for feature in features %}
-        const chart = charts['{{ feature }}'];
-        const value = data.values['{{ feature }}'] || 0;
-        
-        // Update chart data
-        chart.data.labels = dataHistory.timestamps.map(ts => {
-            const d = new Date(ts);
-            return d.toLocaleTimeString();
-        });
-        
-        chart.data.datasets[0].data = dataHistory.features['{{ feature }}'];
-        
-        // Color points red if anomaly
-        chart.data.datasets[0].pointBackgroundColor = dataHistory.features['{{ feature }}'].map((_, i) => {
-            // This is simplified - in production you'd need to know which points were anomalies
-            return data.anomaly && i === chart.data.labels.length - 1 ? '#ff4444' : '#36a2eb';
-        });
-        
-        chart.data.datasets[0].pointRadius = dataHistory.features['{{ feature }}'].map((_, i) => {
-            return data.anomaly && i === chart.data.labels.length - 1 ? 6 : 3;
-        });
-        
-        chart.update();
-        
-        // Update current value display
-        document.getElementById('value-{{ feature|replace(' ', '_')|replace('.', '_') }}').innerText = value.toFixed(2);
-        
-        // Update status badge
-        const badge = document.getElementById('status-{{ feature|replace(' ', '_')|replace('.', '_') }}');
-        if (data.anomaly) {
-            badge.className = 'badge bg-danger';
-            badge.innerText = 'ANOMALY';
-        } else {
-            badge.className = 'badge bg-success';
-            badge.innerText = 'Normal';
-        }
-        {% endfor %}
-        
-        // Show anomaly alert if detected
-        if (data.anomaly) {
-            document.getElementById('anomalyAlert').style.display = 'block';
-            document.getElementById('anomalyMessage').innerHTML = 
-                `<strong>Time:</strong> ${new Date(data.timestamp).toLocaleTimeString()}<br>
-                 <strong>Confidence:</strong> ${(data.confidence * 100).toFixed(0)}%<br>
-                 <strong>Reason:</strong> ${data.reason || 'Pattern deviation detected'}<br>
-                 <strong>Values:</strong> ${JSON.stringify(data.values)}`;
-            
-            // Add to anomaly log
-            const logItem = document.createElement('li');
-            logItem.className = 'list-group-item list-group-item-danger';
-            logItem.innerHTML = `
-                <small>${new Date(data.timestamp).toLocaleTimeString()}</small><br>
-                <strong>Anomaly detected</strong><br>
-                ${data.reason || 'Pattern deviation'}
-            `;
-            document.getElementById('anomalyLog').prepend(logItem);
-            
-            // Limit log entries
-            if (document.getElementById('anomalyLog').children.length > 10) {
-                document.getElementById('anomalyLog').removeChild(
-                    document.getElementById('anomalyLog').lastChild
-                );
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                animation: false,
+                plugins: {
+                    legend: { display: false },
+                    tooltip: { enabled: true }
+                },
+                scales: {
+                    x: { 
+                        display: true,
+                        ticks: { maxTicksLimit: 10 }
+                    },
+                    y: { beginAtZero: false }
+                }
             }
-        }
-    };
-    
-    eventSource.onerror = function() {
-        console.log('SSE connection error');
-        eventSource.close();
-        document.getElementById('startStream').disabled = false;
-        document.getElementById('stopStream').disabled = true;
-    };
-});
+        });
+    });
 
-document.getElementById('stopStream').addEventListener('click', function() {
-    if (eventSource) {
-        eventSource.close();
-        eventSource = null;
-    }
-    document.getElementById('startStream').disabled = false;
-    this.disabled = true;
+    // Start stream button click handler
+    document.getElementById('startStream').addEventListener('click', function() {
+        const interval = document.getElementById('updateInterval').value;
+        
+        this.disabled = true;
+        document.getElementById('stopStream').disabled = false;
+        
+        // Clear previous data
+        dataHistory.timestamps = [];
+        features.forEach(feature => {
+            dataHistory.features[feature] = [];
+        });
+        
+        // Close any existing connection
+        if (eventSource) {
+            eventSource.close();
+        }
+        
+        // Start SSE connection
+        eventSource = new EventSource("{{ url_for('dashboard.stream_data', machine_id=machine.id) }}");
+        
+        eventSource.onmessage = function(e) {
+            try {
+                const data = JSON.parse(e.data);
+                
+                // Update data history
+                dataHistory.timestamps.push(data.timestamp);
+                
+                features.forEach(feature => {
+                    const value = data.values && data.values[feature] ? data.values[feature] : 0;
+                    dataHistory.features[feature].push(value);
+                });
+                
+                // Keep last 50 points for display
+                if (dataHistory.timestamps.length > 50) {
+                    dataHistory.timestamps.shift();
+                    features.forEach(feature => {
+                        dataHistory.features[feature].shift();
+                    });
+                }
+                
+                // Update each chart
+                features.forEach(feature => {
+                    const chart = charts[feature];
+                    if (!chart) return;
+                    
+                    const value = data.values && data.values[feature] ? data.values[feature] : 0;
+                    
+                    // Update chart data
+                    chart.data.labels = dataHistory.timestamps.map(ts => {
+                        try {
+                            const d = new Date(ts);
+                            return d.toLocaleTimeString();
+                        } catch (e) {
+                            return ts;
+                        }
+                    });
+                    
+                    chart.data.datasets[0].data = dataHistory.features[feature];
+                    
+                    // Color points red if anomaly
+                    const pointColors = [];
+                    const pointRadii = [];
+                    
+                    for (let i = 0; i < dataHistory.features[feature].length; i++) {
+                        // Check if this point was an anomaly (simplified - assumes last point is current)
+                        if (data.anomaly && i === dataHistory.features[feature].length - 1) {
+                            pointColors.push('#ff4444');
+                            pointRadii.push(6);
+                        } else {
+                            pointColors.push('#36a2eb');
+                            pointRadii.push(3);
+                        }
+                    }
+                    
+                    chart.data.datasets[0].pointBackgroundColor = pointColors;
+                    chart.data.datasets[0].pointRadius = pointRadii;
+                    
+                    chart.update();
+                    
+                    // Update current value display
+                    const valueElement = document.getElementById('value-' + feature.replace(/[^a-zA-Z0-9]/g, '_'));
+                    if (valueElement) {
+                        valueElement.innerText = value.toFixed(2);
+                    }
+                    
+                    // Update status badge
+                    const badge = document.getElementById('status-' + feature.replace(/[^a-zA-Z0-9]/g, '_'));
+                    if (badge) {
+                        if (data.anomaly) {
+                            badge.className = 'badge bg-danger';
+                            badge.innerText = 'ANOMALY';
+                        } else {
+                            badge.className = 'badge bg-success';
+                            badge.innerText = 'Normal';
+                        }
+                    }
+                });
+                
+                // Show anomaly alert if detected
+                if (data.anomaly) {
+                    document.getElementById('anomalyAlert').style.display = 'block';
+                    document.getElementById('anomalyMessage').innerHTML = 
+                        `<strong>Time:</strong> ${new Date(data.timestamp).toLocaleTimeString()}<br>
+                         <strong>Confidence:</strong> ${data.confidence ? (data.confidence * 100).toFixed(0) : 'N/A'}%<br>
+                         <strong>Reason:</strong> ${data.reason || 'Pattern deviation detected'}`;
+                    
+                    // Add to anomaly log
+                    const logItem = document.createElement('li');
+                    logItem.className = 'list-group-item list-group-item-danger';
+                    
+                    const logTime = data.timestamp ? new Date(data.timestamp).toLocaleTimeString() : 'Unknown time';
+                    
+                    logItem.innerHTML = `
+                        <small>${logTime}</small><br>
+                        <strong>⚠️ Anomaly Detected</strong><br>
+                        <small>${data.reason || 'Pattern deviation'}</small>
+                    `;
+                    
+                    const anomalyLog = document.getElementById('anomalyLog');
+                    anomalyLog.insertBefore(logItem, anomalyLog.firstChild);
+                    
+                    // Limit log entries
+                    if (anomalyLog.children.length > 10) {
+                        anomalyLog.removeChild(anomalyLog.lastChild);
+                    }
+                }
+            } catch (error) {
+                console.error('Error processing stream data:', error);
+            }
+        };
+        
+        eventSource.onerror = function() {
+            console.log('SSE connection error');
+            if (eventSource) {
+                eventSource.close();
+                eventSource = null;
+            }
+            document.getElementById('startStream').disabled = false;
+            document.getElementById('stopStream').disabled = true;
+        };
+    });
+
+    // Stop stream button click handler
+    document.getElementById('stopStream').addEventListener('click', function() {
+        if (eventSource) {
+            eventSource.close();
+            eventSource = null;
+        }
+        document.getElementById('startStream').disabled = false;
+        this.disabled = true;
+    });
 });
 </script>
 

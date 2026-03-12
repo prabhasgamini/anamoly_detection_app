@@ -1,3 +1,27 @@
+from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify, Response, current_app
+from flask_login import login_required, current_user
+from werkzeug.utils import secure_filename
+from app import db
+from app.models import Machine, DataPoint, Alert
+from app.utils.data_parser import parse_csv
+from app.utils.email_alert import send_alert
+from app.anomaly.detector import train_models_for_machine, load_detector_for_machine
+import os
+import json
+import pandas as pd
+import numpy as np
+import time
+import threading
+from datetime import datetime
+
+# IMPORTANT: Create the blueprint FIRST
+dashboard_bp = Blueprint('dashboard', __name__)
+
+# THEN use it for routes
+@dashboard_bp.route('/')
+@login_required
+def index():
+    # ... rest of your code
 @dashboard_bp.route('/stream/<int:machine_id>')
 @login_required
 def stream_page(machine_id):
